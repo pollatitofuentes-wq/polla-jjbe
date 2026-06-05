@@ -435,8 +435,6 @@ button, .nav-btn, .stage-tab, .logo, .badge, header, nav {
       <div id="adminResultsTable"></div>
     </div>
 
-
-
     <!-- Mensaje del Comité -->
     <div style="margin-bottom:24px;">
       <div class="section-title">📢 MENSAJE A LOS PARTICIPANTES</div>
@@ -548,7 +546,6 @@ button, .nav-btn, .stage-tab, .logo, .badge, header, nav {
 // DATA: PARTICIPANTES & PARTIDOS
 // ══════════════════════════════════════════════════
 
-// Lista base
 const BASE_PARTICIPANTS = [
   {name:"Juan Carlos Mendez",email:"",pin:""},
   {name:"Fabian Lavieri",email:"",pin:""},
@@ -561,7 +558,6 @@ const BASE_PARTICIPANTS = [
   {name:"Néstor Méndez",email:"",pin:""},
   {name:"Jorge Alonso",email:"",pin:""},
 ];
-// Acceso rápido a la lista viva (desde state)
 function PARTICIPANTS() { return state.participants || []; }
 
 const MATCHES = [
@@ -679,12 +675,9 @@ const STAGES = [
   {key:"SEMIS", label:"Semis", pts:5},
   {key:"FINAL", label:"Final", pts:6},
 ];
-// Helper: ¿está revelada esta etapa para todos?
 function isStageRevealed(stageKey) {
   return !!(state.revealedStages && state.revealedStages[stageKey]);
 }
-
-
 
 const ADMIN_PWD = "jjbe2026";
 
@@ -692,21 +685,20 @@ const ADMIN_PWD = "jjbe2026";
 // STATE
 // ══════════════════════════════════════════════════
 let state = {
-  participants: [],  // [{name, email}] - managed by admin
+  participants: [],
   results: {},
   forecasts: {},
   champion: {},
   realChampion: "",
-  revealedStages: {}, // {stageKey: true} - comité habilita ver planilla completa
-  confirmed: {},     // {participantIdx: {stageKey: true}}
-  comiteMsg: '',     // mensaje del comité visible para todos
+  revealedStages: {},
+  confirmed: {},
+  comiteMsg: '',
   currentUser: null,
   isAdmin: false,
-  _adminViewingIdx: null, // when admin is viewing a participant
-  _originalUserIdx: null, // participant idx before becoming admin
+  _adminViewingIdx: null,
+  _originalUserIdx: null,
 };
 
-// ── FIREBASE REALTIME DATABASE ──
 const FIREBASE_URL = "https://polla-jjbe-default-rtdb.firebaseio.com";
 
 async function fbGet(path) {
@@ -738,7 +730,6 @@ async function fbPatch(path, value) {
   } catch(e) { return false; }
 }
 
-// Subscribe to real-time updates via SSE
 let fbEventSource = null;
 function fbSubscribe() {
   if (fbEventSource) fbEventSource.close();
@@ -763,7 +754,6 @@ function fbSubscribe() {
 
 function mergeFirebaseData(data) {
   if (!data) {
-    // Data was cleared (reset) - clear local state too
     state.results = {};
     state.forecasts = {};
     state.confirmed = {};
@@ -786,8 +776,6 @@ function mergeFirebaseData(data) {
   if (data.results !== undefined) { state.results = data.results || {}; changed = true; }
   if (data.revealedStages !== undefined) { state.revealedStages = data.revealedStages || {}; changed = true; }
   if (data.realChampion !== undefined) { state.realChampion = data.realChampion; changed = true; }
-  // Never overwrite participants from Firebase for JJBE
-  // if (data.participants && data.participants.length > 0) { state.participants = data.participants; changed = true; }
   if (data.comiteMsg !== undefined) { state.comiteMsg = data.comiteMsg; changed = true; }
   if (data.forecasts) {
     Object.entries(data.forecasts).forEach(([idx, fc]) => { state.forecasts[idx] = fc; changed = true; });
@@ -800,22 +788,18 @@ function mergeFirebaseData(data) {
     saveLocal();
     showSyncIndicator('ok');
     if (document.getElementById('mainApp').style.display !== 'none') {
-      // Rebuild stats and ranking without changing current panel
       buildStats();
       buildRanking();
       buildRevealedStageButtons();
       buildGlobalMsgBanner();
-      // Only update participant view if currently viewing it
       const activePanel = document.querySelector('.panel.active');
       if (activePanel && activePanel.id === 'panel-participante') {
         if (state.isAdmin && state._adminViewingIdx !== null) {
-          // Admin was viewing a participant — restore that view
           showParticipantView(state._adminViewingIdx, state._pvStage);
         } else if (state.currentUser !== null && state.currentUser !== 'admin') {
           showParticipantView(state.currentUser, state._pvStage);
         }
       }
-      // If on admin panel, refresh admin-specific controls
       if (activePanel && activePanel.id === 'panel-admin') {
         buildStageRevealControls();
         buildAdminSummary();
@@ -824,8 +808,6 @@ function mergeFirebaseData(data) {
   }
 }
 
-
-// ── loadState: chequea reset timestamp en Firebase antes de cargar localStorage ──
 function loadState() {
   const urlIdx = new URLSearchParams(window.location.search).get('p');
   fetch(FIREBASE_URL + '/pollajjbe/_resetTimestamp.json')
@@ -850,9 +832,7 @@ function _initApp(urlIdx) {
       state = {...state, ...loaded};
     } catch(e) {}
   }
-  // Always use BASE_PARTICIPANTS for JJBE - never overwrite from Firebase
   state.participants = BASE_PARTICIPANTS.map(p => ({...p}));
-  // Handle direct URL link (?p=N)
   if (urlIdx !== null) {
     const idx = parseInt(urlIdx);
     if (!isNaN(idx) && idx >= 0 && idx < PARTICIPANTS().length) {
@@ -869,7 +849,6 @@ function _initApp(urlIdx) {
     }
   }
   fbSubscribe();
-  // Pre-fill access input with last used name
   const session = localStorage.getItem('pollaSessionJJBE');
   if (session) {
     try {
@@ -887,8 +866,6 @@ function _initApp(urlIdx) {
   }
 }
 
-
-// ── Guardar en localStorage (siempre, como cache) ──
 function saveLocal() {
   const toSave = {
     participants: state.participants,
@@ -901,7 +878,6 @@ function saveLocal() {
     comiteMsg: state.comiteMsg || '',
   };
   localStorage.setItem('pollaJJBE2026', JSON.stringify(toSave));
-  // Save session (who is logged in)
   if (state.currentUser !== null) {
     localStorage.setItem('pollaSessionJJBE', JSON.stringify({
       currentUser: state.currentUser,
@@ -911,7 +887,6 @@ function saveLocal() {
   }
 }
 
-// ── saveState: guarda local + sube a Firebase ──
 function saveState() {
   saveLocal();
   pushToFirebase();
@@ -932,7 +907,6 @@ async function pushToFirebase() {
   const ok = await fbSet('polla', toSave);
   showSyncIndicator(ok ? 'ok' : 'error');
 }
-
 
 function showSyncIndicator(status) {
   let el = document.getElementById('syncIndicator');
@@ -960,9 +934,7 @@ function handleAccess() {
 }
 
 function requestAdminAccess() {
-  // If already admin, go directly
   if (state.isAdmin) { showPanel('panel-admin'); return; }
-  // Otherwise show password modal
   document.getElementById('modalAdminPwInput').value = '';
   document.getElementById('modalAdminPwError').classList.remove('show');
   document.getElementById('modalAdminPw').classList.add('open');
@@ -1023,7 +995,6 @@ function enterApp() {
   buildAll();
 }
 
-// Check URL param on load
 window.addEventListener('load', () => {
   loadState();
 });
@@ -1039,37 +1010,23 @@ function getMatchPts(stage) {
 function calcScore(participantIdx) {
   let pts = 0, exact = 0, correct = 0;
   const fcs = state.forecasts[participantIdx] || {};
-  
   for (const m of MATCHES) {
     const real = state.results[m.id];
     const fc = fcs[m.id];
     if (!real || !fc) continue;
     if (fc.a === undefined || fc.b === undefined) continue;
-    
     const multiplier = getMatchPts(m.etapa);
-    
     if (fc.a === real.a && fc.b === real.b) {
-      // Resultado exacto: 3pts base × multiplicador
-      pts += 3 * multiplier;
-      exact++;
+      pts += 3 * multiplier; exact++;
     } else {
       const realWinner = real.a > real.b ? 1 : real.a < real.b ? -1 : 0;
       const fcWinner = fc.a > fc.b ? 1 : fc.a < fc.b ? -1 : 0;
-      if (realWinner === fcWinner) {
-        // Ganador correcto: 1pt × multiplicador
-        pts += 1 * multiplier;
-        correct++;
-      }
+      if (realWinner === fcWinner) { pts += 1 * multiplier; correct++; }
     }
   }
-  
-  // Campeón
   if (state.realChampion && state.champion[participantIdx]) {
-    if (state.champion[participantIdx].toLowerCase() === state.realChampion.toLowerCase()) {
-      pts += 10;
-    }
+    if (state.champion[participantIdx].toLowerCase() === state.realChampion.toLowerCase()) pts += 10;
   }
-  
   return { pts, exact, correct };
 }
 
@@ -1099,34 +1056,19 @@ function buildStats() {
   const total = MATCHES.length;
   const ranking = getRanking();
   const leader = ranking[0];
-  
   document.getElementById('statsRow').innerHTML = `
-    <div class="stat-box">
-      <div class="stat-num">${played}</div>
-      <div class="stat-label">PARTIDOS JUGADOS</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-num">${total - played}</div>
-      <div class="stat-label">PARTIDOS RESTANTES</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-num">${PARTICIPANTS().length}</div>
-      <div class="stat-label">PARTICIPANTES</div>
-    </div>
-    <div class="stat-box">
-      <div class="stat-num" style="color:var(--oro);">${leader.pts}</div>
-      <div class="stat-label">PUNTAJE LÍDER</div>
-    </div>
+    <div class="stat-box"><div class="stat-num">${played}</div><div class="stat-label">PARTIDOS JUGADOS</div></div>
+    <div class="stat-box"><div class="stat-num">${total - played}</div><div class="stat-label">PARTIDOS RESTANTES</div></div>
+    <div class="stat-box"><div class="stat-num">${PARTICIPANTS().length}</div><div class="stat-label">PARTICIPANTES</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:var(--oro);">${leader.pts}</div><div class="stat-label">PUNTAJE LÍDER</div></div>
   `;
 }
 
 function buildRanking() {
   const ranking = getRanking();
   let html = `<table class="ranking-table"><thead><tr>
-    <th>#</th><th>PARTICIPANTE</th><th>PUNTOS</th><th>EXACTOS</th><th>CORRECTOS</th>
-    <th>MIS PRONÓSTICOS</th>
+    <th>#</th><th>PARTICIPANTE</th><th>PUNTOS</th><th>EXACTOS</th><th>CORRECTOS</th><th>MIS PRONÓSTICOS</th>
   </tr></thead><tbody>`;
-  
   ranking.forEach((p, i) => {
     const posClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
     html += `<tr>
@@ -1138,7 +1080,6 @@ function buildRanking() {
       ${(state.isAdmin || state.currentUser === p.idx || STAGES.some(s => isStageRevealed(s.key))) ? `<td><button class="btn btn-ghost btn-sm" onclick="showParticipantView(${p.idx})">👁 Ver</button></td>` : '<td></td>'}
     </tr>`;
   });
-  
   html += '</tbody></table>';
   document.getElementById('rankingTableContainer').innerHTML = html;
   buildRevealedStageButtons();
@@ -1153,9 +1094,7 @@ function buildGlobalMsgBanner() {
       <span style="font-size:20px;flex-shrink:0;">📢</span>
       <span style="font-size:15px;color:var(--text);font-weight:500;line-height:1.4;">${msg}</span>
     </div>`;
-  } else {
-    el.innerHTML = '';
-  }
+  } else { el.innerHTML = ''; }
 }
 
 function buildRevealedStageButtons() {
@@ -1187,18 +1126,15 @@ function buildMatches(stageKey, btn) {
     document.querySelectorAll('.stage-tab').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
   }
-  
   const matches = MATCHES.filter(m => m.etapa === stageKey);
   const fcs = state.forecasts[state.currentUser] || {};
   const isParticipant = state.currentUser !== 'admin' && state.currentUser !== null;
   const multiplier = getMatchPts(stageKey);
-  
   let html = '';
   matches.forEach(m => {
     const real = state.results[m.id];
     const fc = isParticipant ? fcs[m.id] : null;
     const locked = !!real || !isParticipant;
-    
     let ptsHtml = '';
     if (real && fc && fc.a !== undefined) {
       if (fc.a === real.a && fc.b === real.b) {
@@ -1211,30 +1147,24 @@ function buildMatches(stageKey, btn) {
     } else if (real) {
       ptsHtml = `<span class="pts-badge pts-pending">REAL: ${real.a}-${real.b}</span>`;
     }
-    
     const scoreInputs = locked
-      ? (real ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--oro);">${real.a} - ${real.b}</span>` 
-              : (fc ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gris);">${fc.a} - ${fc.b}</span>` 
+      ? (real ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--oro);">${real.a} - ${real.b}</span>`
+              : (fc ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gris);">${fc.a} - ${fc.b}</span>`
                     : `<span class="mp-lock">Sin pronóstico</span>`))
-      : `<input type="number" class="score-input" min="0" max="20" value="${fc?.a??''}" placeholder="?" 
+      : `<input type="number" class="score-input" min="0" max="20" value="${fc?.a??''}" placeholder="?"
            onchange="saveForecast(${m.id},'a',this.value)" oninput="this.value=Math.max(0,Math.min(20,parseInt(this.value)||0))">
          <span class="score-dash">-</span>
-         <input type="number" class="score-input" min="0" max="20" value="${fc?.b??''}" placeholder="?" 
+         <input type="number" class="score-input" min="0" max="20" value="${fc?.b??''}" placeholder="?"
            onchange="saveForecast(${m.id},'b',this.value)" oninput="this.value=Math.max(0,Math.min(20,parseInt(this.value)||0))">`;
-    
-    const adminInputs = '';
-    
-    const realBadge = real && state.isAdmin 
+    const realBadge = real && state.isAdmin
       ? `<span style="font-family:'Bebas Neue';font-size:18px;color:var(--verde);">✓ ${real.a}-${real.b}</span>
-         <button class="btn btn-ghost btn-sm" onclick="deleteResult(${m.id})" style="margin-left:8px;">✕</button>` 
+         <button class="btn btn-ghost btn-sm" onclick="deleteResult(${m.id})" style="margin-left:8px;">✕</button>`
       : '';
-    
     html += `<div class="match-card">
       <div class="match-num">${m.id}</div>
       <div class="match-teams">
         <div class="match-fecha">📅 ${m.fecha} ${m.hora} · ${m.estadio} · <strong>Grupo ${m.grupo}</strong></div>
         <div class="match-teams-row">${m.local} <span class="match-vs">vs</span> ${m.visita}</div>
-        ${adminInputs}
       </div>
       <div class="match-score">
         ${realBadge}
@@ -1243,7 +1173,6 @@ function buildMatches(stageKey, btn) {
       </div>
     </div>`;
   });
-  
   document.getElementById('matchesContainer').innerHTML = html || '<div class="text-muted" style="padding:20px;">No hay partidos en esta etapa.</div>';
 }
 
@@ -1254,7 +1183,6 @@ function buildParticipantsGrid() {
     const score = calcScore(idx);
     const rank = ranking.findIndex(r => r.idx === idx) + 1;
     const isMe = state.currentUser === idx;
-    // Can only see others' details if admin OR if any stage is revealed
     const anyRevealed = STAGES.some(s => isStageRevealed(s.key));
     const canSeeDetails = state.isAdmin || isMe || anyRevealed;
     html += `<div class="participant-card" style="${isMe ? 'border-color:var(--verde);' : ''}">
@@ -1276,11 +1204,9 @@ function buildParticipantsGrid() {
 }
 
 function buildAdminMatchSel() { buildAdminResultsTable(state._adminStage || '1RUEDA'); }
-function onAdminMatchChange() {}
 
 function buildAdminResultsTable(stageKey) {
   state._adminStage = stageKey;
-  // Build stage tabs
   const tabsEl = document.getElementById('adminStageTabs');
   if (tabsEl) {
     tabsEl.innerHTML = STAGES.map(s => {
@@ -1292,27 +1218,21 @@ function buildAdminResultsTable(stageKey) {
       </button>`;
     }).join('');
   }
-
   const el = document.getElementById('adminResultsTable');
   if (!el) return;
   const stageMatches = MATCHES.filter(m => m.etapa === stageKey);
-  const stage = STAGES.find(s => s.key === stageKey);
   const donePct = Math.round(stageMatches.filter(m => state.results[m.id]).length / stageMatches.length * 100);
-
   let html = `<div style="margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
     <div style="flex:1;background:var(--bg);border-radius:20px;height:8px;min-width:120px;">
       <div style="background:var(--verde);height:8px;border-radius:20px;width:${donePct}%;transition:width 0.4s;"></div>
     </div>
     <span style="font-size:13px;color:var(--text-muted);">${stageMatches.filter(m=>state.results[m.id]).length} de ${stageMatches.length} resultados cargados</span>
   </div>`;
-
-  // Group by date
   const byDate = {};
   stageMatches.forEach(m => {
     if (!byDate[m.fecha]) byDate[m.fecha] = [];
     byDate[m.fecha].push(m);
   });
-
   Object.entries(byDate).forEach(([fecha, matches]) => {
     html += `<div style="font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:1px;margin:16px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--border);">📅 ${fecha}</div>`;
     matches.forEach(m => {
@@ -1345,7 +1265,6 @@ function buildAdminResultsTable(stageKey) {
       </div>`;
     });
   });
-
   el.innerHTML = html;
 }
 
@@ -1361,7 +1280,6 @@ function adminSaveInline(matchId) {
   buildAdminResultsTable(state._adminStage || '1RUEDA');
   buildRanking(); buildStats();
   showAlert('success', `Partido #${matchId}: ${a} - ${b} ✓`);
-  // Move focus to next pending match
   const pending = MATCHES.filter(m => m.etapa === (state._adminStage||'1RUEDA') && !state.results[m.id]);
   if (pending.length > 0) {
     setTimeout(() => {
@@ -1388,10 +1306,33 @@ function buildAdminSummary() {
       <span class="pts-badge pts-3">${played} partidos con resultado</span>
       <span class="pts-badge pts-pending">${pending} pendientes</span>
     </div>
-    <div class="text-muted">Participantes con al menos 1 pronóstico: 
+    <div class="text-muted">Participantes con al menos 1 pronóstico:
       ${Object.keys(state.forecasts).filter(k => Object.keys(state.forecasts[k]||{}).length > 0).length} de ${PARTICIPANTS().length}
     </div>
   `;
+}
+
+// ══════════════════════════════════════════════════
+// TAB NAVIGATION EN PRONÓSTICOS (NUEVO)
+// ══════════════════════════════════════════════════
+function pvTab(event, pIdx, matchId, side) {
+  if (event.key !== 'Tab' && event.key !== 'Enter') return;
+  event.preventDefault();
+  // Guardar valor actual antes de saltar
+  const currentVal = event.target.value;
+  saveForForecast(pIdx, matchId, side, currentVal);
+  if (side === 'a') {
+    // De campo local → campo visita del mismo partido
+    const next = document.getElementById('pv_' + matchId + '_b');
+    if (next) { next.focus(); next.select(); }
+  } else {
+    // De campo visita → campo local del SIGUIENTE partido editable
+    const allA = Array.from(document.querySelectorAll('[id^="pv_"][id$="_a"]'));
+    const currentA = document.getElementById('pv_' + matchId + '_a');
+    const currentIdx = allA.indexOf(currentA);
+    const nextA = allA[currentIdx + 1];
+    if (nextA) { nextA.focus(); nextA.select(); }
+  }
 }
 
 // ══════════════════════════════════════════════════
@@ -1414,7 +1355,6 @@ function showParticipantView(idx, activeStageKey) {
   const rank = ranking.findIndex(r => r.idx === idx) + 1;
   const fcs = state.forecasts[idx] || {};
 
-  // ── HEADER
   let html = `
     <div class="pv-header">
       <div class="pv-name">${name}</div>
@@ -1423,7 +1363,6 @@ function showParticipantView(idx, activeStageKey) {
       <div class="pv-rank">Posición #${rank} de ${PARTICIPANTS().length} · ⭐ ${score.exact} exactos · ✓ ${score.correct} correctos</div>
     </div>`;
 
-  // ── MESSAGE BANNER from comité
   const msg = state.comiteMsg || '';
   if (msg.trim()) {
     html += `<div style="background:linear-gradient(135deg,rgba(245,197,24,0.2),rgba(0,166,81,0.15));border:2px solid rgba(245,197,24,0.6);border-radius:8px;padding:14px 16px;margin-bottom:16px;display:flex;align-items:flex-start;gap:10px;width:100%;box-sizing:border-box;">
@@ -1432,7 +1371,6 @@ function showParticipantView(idx, activeStageKey) {
     </div>`;
   }
 
-  // ── STAGE TABS (one per phase)
   html += '<div class="stage-tabs" style="margin-bottom:0;">';
   STAGES.forEach(stage => {
     const sm = MATCHES.filter(m => m.etapa === stage.key);
@@ -1446,7 +1384,6 @@ function showParticipantView(idx, activeStageKey) {
   });
   html += '</div>';
 
-  // ── ACTIVE STAGE CONTENT
   const stage = STAGES.find(s => s.key === activeStageKey);
   const stageMatches = MATCHES.filter(m => m.etapa === activeStageKey);
   const fcsStage = stageMatches.filter(m => { const fc=fcs[m.id]; return fc && fc.a!==undefined; });
@@ -1457,15 +1394,12 @@ function showParticipantView(idx, activeStageKey) {
   const confirmed = state.confirmed?.[idx]?.[activeStageKey];
   const revealed = isStageRevealed(activeStageKey);
 
-  // Stage card
   html += `<div class="card" style="margin-top:0;border-top-left-radius:0;border-top-right-radius:0;">`;
 
-  // Prev/Next navigation
   const stageIndex = STAGES.findIndex(s => s.key === activeStageKey);
   const prevStage = stageIndex > 0 ? STAGES[stageIndex - 1] : null;
   const nextStage = stageIndex < STAGES.length - 1 ? STAGES[stageIndex + 1] : null;
 
-  // Stage info bar
   html += `<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--border);">
     <div style="display:flex;align-items:center;gap:8px;">
       ${prevStage ? `<button class="btn btn-ghost btn-sm" onclick="showParticipantView(${idx},'${prevStage.key}')">◀ ${prevStage.label}</button>` : `<span style="display:inline-block;width:70px;"></span>`}
@@ -1486,7 +1420,6 @@ function showParticipantView(idx, activeStageKey) {
     </div>
   </div>`;
 
-  // Group matches by date
   const byDate = {};
   stageMatches.forEach(m => {
     if (!byDate[m.fecha]) byDate[m.fecha] = [];
@@ -1514,16 +1447,19 @@ function showParticipantView(idx, activeStageKey) {
         ptsHtml = `<span class="pts-badge pts-0">Sin pronóstico</span>`;
       }
 
+      // ── SCORE ROW CON TAB NAVIGATION ──
       const scoreRow = isEditable
         ? `<div class="mp-inputs">
-             <input type="number" class="score-input" min="0" max="20" value="${fc?.a??''}" placeholder="?"
+             <input type="number" class="score-input" id="pv_${m.id}_a" min="0" max="20" value="${fc?.a??''}" placeholder="?"
                onchange="saveForForecast(${idx},${m.id},'a',this.value)"
                oninput="this.value=Math.max(0,Math.min(20,parseInt(this.value)||0))"
+               onkeydown="pvTab(event,${idx},${m.id},'a')"
                onfocus="this.select()">
              <span class="score-dash">-</span>
-             <input type="number" class="score-input" min="0" max="20" value="${fc?.b??''}" placeholder="?"
+             <input type="number" class="score-input" id="pv_${m.id}_b" min="0" max="20" value="${fc?.b??''}" placeholder="?"
                onchange="saveForForecast(${idx},${m.id},'b',this.value)"
                oninput="this.value=Math.max(0,Math.min(20,parseInt(this.value)||0))"
+               onkeydown="pvTab(event,${idx},${m.id},'b')"
                onfocus="this.select()">
            </div>`
         : `<div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:${real?'var(--oro)':'var(--gris)'};">
@@ -1549,7 +1485,6 @@ function showParticipantView(idx, activeStageKey) {
     });
   });
 
-  // ── BOTTOM: confirm button
   html += `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:20px;padding-top:16px;border-top:2px solid var(--border);flex-wrap:wrap;">
     <div>
       <div id="pvProgressStatus" style="font-size:13px;color:var(--text-muted);">
@@ -1566,8 +1501,7 @@ function showParticipantView(idx, activeStageKey) {
     </button>
   </div>`;
 
-  html += '</div>'; // close card
-
+  html += '</div>';
   document.getElementById('participantViewContent').innerHTML = html;
 }
 
@@ -1588,7 +1522,6 @@ function saveForForecast(pIdx, matchId, side, val) {
   if (!state.forecasts[pIdx][matchId]) state.forecasts[pIdx][matchId] = {};
   state.forecasts[pIdx][matchId][side] = parseInt(val) || 0;
   saveState();
-  // Update only progress bar and pts badge without re-rendering (keeps focus)
   updateStageProgress(pIdx, state._pvStage || '1RUEDA');
   updateMatchPts(pIdx, matchId);
 }
@@ -1602,8 +1535,6 @@ function updateStageProgress(pIdx, stageKey) {
   const loaded = stageMatches.filter(m => { const fc=fcs[m.id]; return fc && fc.a!==undefined && fc.b!==undefined; }).length;
   const pct = total > 0 ? Math.round(loaded/total*100) : 0;
   const barColor = loaded === total ? 'var(--verde)' : loaded > 0 ? 'var(--oro)' : 'var(--gris)';
-
-  // Update progress bar
   const bar = document.getElementById('pvProgressBar');
   const label = document.getElementById('pvProgressLabel');
   const statusEl = document.getElementById('pvProgressStatus');
@@ -1614,8 +1545,6 @@ function updateStageProgress(pIdx, stageKey) {
       ? '<span style="color:var(--verde);font-weight:600;">✅ Todos los pronósticos cargados</span>'
       : '<span style="color:var(--oro);">Faltan ' + (total - loaded) + ' pronósticos</span>';
   }
-
-  // Update tab badge
   const tabBtn = document.getElementById('stageTab_' + stageKey);
   if (tabBtn) {
     const confirmed = state.confirmed?.[pIdx]?.[stageKey];
@@ -1632,7 +1561,6 @@ function updateMatchPts(pIdx, matchId) {
   const stage = STAGES.find(s => s.key === m.etapa);
   const el = document.getElementById('matchPts_' + matchId);
   if (!el || !real || !fc || fc.a === undefined) return;
-
   let html = '';
   if (fc.a === real.a && fc.b === real.b) {
     html = '<span class="pts-badge pts-3">+' + (3*stage.pts) + 'pts ⭐</span>';
@@ -1656,18 +1584,6 @@ function saveResult() {
   showAlert('success', `Resultado del partido #${id} guardado: ${a}-${b}`);
 }
 
-function quickSaveResult(matchId) {
-  const a = parseInt(document.getElementById(`ri_${matchId}_a`).value);
-  const b = parseInt(document.getElementById(`ri_${matchId}_b`).value);
-  if (isNaN(a) || isNaN(b)) return;
-  state.results[matchId] = {a, b};
-  saveState();
-  buildAll();
-  const activeTab = document.querySelector('.stage-tab.active');
-  if (activeTab) buildMatches(MATCHES.find(m=>m.id===matchId).etapa, activeTab);
-  showAlert('success', `Partido #${matchId}: ${a}-${b}`);
-}
-
 function deleteResult(matchId) {
   if (!confirm(`¿Borrar resultado del partido #${matchId}?`)) return;
   delete state.results[matchId];
@@ -1682,13 +1598,6 @@ function saveChampion() {
   showAlert('success', `Campeón real guardado: ${state.realChampion}`);
 }
 
-function saveChampionForecast(idx) {
-  const val = document.getElementById('champInput').value.trim();
-  state.champion[idx] = val;
-  saveState();
-  showAlert('success', 'Pronóstico campeón guardado.');
-}
-
 // ══════════════════════════════════════════════════
 // UI HELPERS
 // ══════════════════════════════════════════════════
@@ -1696,14 +1605,10 @@ function showPanel(id) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  const map = {
-    'panel-posiciones': 0, 'panel-partidos': 1, 'panel-participantes': 2, 'panel-admin': 3,
-  };
+  const map = {'panel-posiciones': 0, 'panel-partidos': 1, 'panel-participantes': 2, 'panel-admin': 3};
   const navBtns = document.querySelectorAll('.nav-btn');
   if (map[id] !== undefined) navBtns[map[id]]?.classList.add('active');
-  // Clear admin participant view tracking when navigating away
   if (id !== 'panel-participante' && state.isAdmin) state._adminViewingIdx = null;
-  
   if (id === 'panel-posiciones') { buildStats(); buildRanking(); }
   if (id === 'panel-partidos') { buildStageTabs(); buildMatches('1RUEDA'); }
   if (id === 'panel-participantes') buildParticipantsGrid();
@@ -1756,7 +1661,6 @@ function removeParticipant(idx) {
   const p = state.participants[idx];
   if (!confirm(`¿Eliminar a "${p.name}"? Se borrarán también sus pronósticos.`)) return;
   state.participants.splice(idx, 1);
-  // Clean up their forecasts and champion
   delete state.forecasts[idx];
   delete state.champion[idx];
   saveState();
@@ -1816,7 +1720,6 @@ function buildAdminParticipantsList() {
   el.innerHTML = html;
 }
 
-// ── EMAIL
 let currentEmailIdx = null;
 function showEmailModal(idx) {
   currentEmailIdx = idx;
@@ -1828,20 +1731,15 @@ function showEmailModal(idx) {
     </p>
     <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;line-height:1.7;">
       <div><strong>Para:</strong> ${p.email}</div>
-      <div><strong>Asunto:</strong> Polla Tito Fuentes · Mundial 2026 · Tu link personal</div>
+      <div><strong>Asunto:</strong> Polla JJBE · Mundial 2026 · Tu link personal</div>
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">
         Hola ${p.name}!<br><br>
-        Te invitamos a participar de la <strong>Polla Tito Fuentes · Mundial 2026</strong>.<br><br>
-        Entrá con tu link personal (sin contraseña):<br>
+        Te invitamos a participar de la <strong>Polla JJBE · Mundial 2026</strong>.<br><br>
+        Entrá con tu link personal:<br>
         <span style="color:var(--verde);word-break:break-all;">${url}</span><br><br>
-        Desde ahí podés cargar tus pronósticos partido por partido.<br>
         ¡Buena suerte! ⚽
       </div>
-    </div>
-    <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">
-      Se abrirá tu cliente de correo con este mensaje listo para enviar.
-    </p>
-  `;
+    </div>`;
   document.getElementById('modalEmailBtn').dataset.idx = idx;
   document.getElementById('modalEmail').classList.add('open');
 }
@@ -1850,17 +1748,11 @@ function sendEmail() {
   const idx = parseInt(document.getElementById('modalEmailBtn').dataset.idx);
   const p = state.participants[idx];
   const url = `${location.origin}${location.pathname}?p=${idx}`;
-  const subject = encodeURIComponent('Polla Tito Fuentes · Mundial 2026 · Tu link personal');
-  const body = encodeURIComponent(
-    `Hola ${p.name}!\n\n` +
-    `Te invitamos a participar de la Polla Tito Fuentes · Mundial 2026.\n\n` +
-    `Entrá con tu link personal (sin contraseña):\n${url}\n\n` +
-    `Desde ahí podés cargar tus pronósticos partido por partido.\n¡Buena suerte! ⚽`
-  );
+  const subject = encodeURIComponent('Polla JJBE · Mundial 2026 · Tu link personal');
+  const body = encodeURIComponent(`Hola ${p.name}!\n\nTe invitamos a la Polla JJBE · Mundial 2026.\n\nTu link:\n${url}\n\n¡Buena suerte! ⚽`);
   window.open(`mailto:${p.email}?subject=${subject}&body=${body}`);
   closeModal('modalEmail');
 }
-
 
 // ══════════════════════════════════════════════════
 // STAGE REVEAL CONTROLS
@@ -1883,7 +1775,7 @@ function buildStageRevealControls() {
         </div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-        ${revealed 
+        ${revealed
           ? `<button class="btn btn-red btn-sm" onclick="toggleStageReveal('${stage.key}', false)">🔒 Cerrar planilla</button>`
           : `<button class="btn btn-oro btn-sm" onclick="toggleStageReveal('${stage.key}', true)">🔓 Revelar planilla</button>`
         }
@@ -1900,31 +1792,24 @@ function toggleStageReveal(stageKey, reveal) {
   if (!state.revealedStages) state.revealedStages = {};
   state.revealedStages[stageKey] = reveal;
   saveState();
-  // Only rebuild what's needed - don't change current panel
   buildStageRevealControls();
   buildRevealedStageButtons();
   const stage = STAGES.find(s => s.key === stageKey);
-  showAlert('success', reveal 
-    ? `✅ Planilla de ${stage.label} ahora visible para todos los participantes.`
-    : `🔒 Planilla de ${stage.label} cerrada. Cada uno ve solo los suyos.`
+  showAlert('success', reveal
+    ? `✅ Planilla de ${stage.label} ahora visible para todos.`
+    : `🔒 Planilla de ${stage.label} cerrada.`
   );
 }
 
 // ══════════════════════════════════════════════════
-// FULL STAGE TABLE (planilla completa de una etapa)
+// FULL STAGE TABLE
 // ══════════════════════════════════════════════════
 function showFullStageTable(stageKey) {
-  // Can be called by admin always, or by participant if stage is revealed
   const canSee = state.isAdmin || isStageRevealed(stageKey);
-  if (!canSee) {
-    showAlert('error', 'Esta etapa aún no fue revelada por el comité.');
-    return;
-  }
-  // Admin always passes through
+  if (!canSee) { showAlert('error', 'Esta etapa aún no fue revelada por el comité.'); return; }
   const stage = STAGES.find(s => s.key === stageKey);
   const stageMatches = MATCHES.filter(m => m.etapa === stageKey);
   const participants = PARTICIPANTS();
-  
   const COL_PARTIDO = 200;
   const COL_REAL = 72;
   let html = `<div style="overflow-x:auto;">
@@ -1940,7 +1825,6 @@ function showFullStageTable(stageKey) {
         <tr>
           <th style="background:var(--azul);padding:8px 12px;text-align:left;border-bottom:2px solid var(--verde);white-space:nowrap;position:sticky;left:0;z-index:2;width:${COL_PARTIDO}px;">PARTIDO</th>
           <th style="background:var(--azul);padding:8px 12px;text-align:center;border-bottom:2px solid var(--verde);white-space:nowrap;position:sticky;left:${COL_PARTIDO}px;z-index:2;width:${COL_REAL}px;border-left:2px solid var(--oro);">REAL</th>`;
-  
   participants.forEach((p, idx) => {
     const isMe = state.currentUser === idx;
     html += `<th style="background:${isMe?'rgba(0,166,81,0.2)':'var(--azul)'};padding:6px 8px;text-align:center;border-bottom:2px solid var(--verde);white-space:normal;min-width:85px;max-width:110px;vertical-align:middle;" title="${p.name}">
@@ -1948,8 +1832,7 @@ function showFullStageTable(stageKey) {
     </th>`;
   });
   html += '</tr></thead><tbody>';
-
-  // TOTAL row at TOP
+  // TOTAL row top
   html += `<tr style="border-bottom:2px solid var(--verde);position:sticky;top:0;z-index:2;">
     <td style="padding:8px 12px;background:var(--azul);font-family:'Bebas Neue',sans-serif;letter-spacing:1px;font-size:13px;position:sticky;left:0;z-index:3;width:${COL_PARTIDO}px;">TOTAL ${stage.label.toUpperCase()}</td>
     <td style="padding:8px 12px;background:var(--azul);position:sticky;left:${COL_PARTIDO}px;z-index:3;border-left:2px solid var(--oro);width:${COL_REAL}px;"></td>`;
@@ -1960,11 +1843,7 @@ function showFullStageTable(stageKey) {
       const fc = (state.forecasts[idx] || {})[m.id];
       if (!real || !fc || fc.a === undefined) return;
       if (fc.a === real.a && fc.b === real.b) stagePts += 3*stage.pts;
-      else {
-        const rw = real.a>real.b?1:real.a<real.b?-1:0;
-        const fw = fc.a>fc.b?1:fc.a<fc.b?-1:0;
-        if (rw === fw) stagePts += stage.pts;
-      }
+      else { const rw = real.a>real.b?1:real.a<real.b?-1:0; const fw = fc.a>fc.b?1:fc.a<fc.b?-1:0; if (rw===fw) stagePts += stage.pts; }
     });
     const isMe = state.currentUser === idx;
     html += `<td style="padding:8px 6px;text-align:center;background:var(--azul);${isMe?'border-left:2px solid var(--verde);border-right:2px solid var(--verde);':''}">
@@ -1972,7 +1851,6 @@ function showFullStageTable(stageKey) {
     </td>`;
   });
   html += '</tr>';
-
   stageMatches.forEach((m, mi) => {
     const real = state.results[m.id];
     html += `<tr style="border-bottom:1px solid var(--border);">
@@ -1982,41 +1860,24 @@ function showFullStageTable(stageKey) {
       <td style="padding:8px 12px;text-align:center;background:var(--bg2);position:sticky;left:${COL_PARTIDO}px;z-index:1;width:${COL_REAL}px;border-left:2px solid var(--oro);">
         ${real ? `<span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--oro);">${real.a}-${real.b}</span>` : '<span style="color:var(--text-muted);">—</span>'}
       </td>`;
-    
     participants.forEach((p, idx) => {
       const fc = (state.forecasts[idx] || {})[m.id];
       const isMe = state.currentUser === idx;
       let cell = '<span style="color:var(--text-muted);">—</span>';
       let bg = mi % 2 === 0 ? 'var(--bg)' : 'var(--bg2)';
       let pts = '';
-      
       if (fc && fc.a !== undefined) {
         if (real) {
-          if (fc.a === real.a && fc.b === real.b) {
-            bg = 'rgba(0,166,81,0.15)';
-            pts = `<span style="color:var(--verde);font-size:10px;">+${3*stage.pts}</span>`;
-          } else {
-            const rw = real.a>real.b?1:real.a<real.b?-1:0;
-            const fw = fc.a>fc.b?1:fc.a<fc.b?-1:0;
-            if (rw === fw) {
-              bg = 'rgba(245,197,24,0.1)';
-              pts = `<span style="color:var(--oro);font-size:10px;">+${stage.pts}</span>`;
-            } else {
-              bg = 'rgba(230,57,70,0.08)';
-              pts = `<span style="color:var(--rojo);font-size:10px;">0</span>`;
-            }
-          }
+          if (fc.a === real.a && fc.b === real.b) { bg = 'rgba(0,166,81,0.15)'; pts = `<span style="color:var(--verde);font-size:10px;">+${3*stage.pts}</span>`; }
+          else { const rw = real.a>real.b?1:real.a<real.b?-1:0; const fw = fc.a>fc.b?1:fc.a<fc.b?-1:0; if (rw===fw) { bg = 'rgba(245,197,24,0.1)'; pts = `<span style="color:var(--oro);font-size:10px;">+${stage.pts}</span>`; } else { bg = 'rgba(230,57,70,0.08)'; pts = `<span style="color:var(--rojo);font-size:10px;">0</span>`; } }
         }
         cell = `<span style="font-family:'Bebas Neue',sans-serif;font-size:16px;">${fc.a}-${fc.b}</span>${pts ? '<br>'+pts : ''}`;
       }
-      
       html += `<td style="padding:6px 8px;text-align:center;background:${bg};${isMe?'border-left:2px solid var(--verde);border-right:2px solid var(--verde);':''}">${cell}</td>`;
     });
-    
     html += '</tr>';
   });
-  
-  // Totals row
+  // Totals bottom
   html += `<tr style="border-top:2px solid var(--verde);">
     <td style="padding:10px 12px;background:var(--azul);font-family:'Bebas Neue',sans-serif;letter-spacing:1px;font-size:14px;position:sticky;left:0;z-index:1;width:${COL_PARTIDO}px;">TOTAL ${stage.label.toUpperCase()}</td>
     <td style="padding:10px 12px;background:var(--azul);position:sticky;left:${COL_PARTIDO}px;z-index:1;border-left:2px solid var(--oro);width:${COL_REAL}px;"></td>`;
@@ -2027,11 +1888,7 @@ function showFullStageTable(stageKey) {
       const fc = (state.forecasts[idx] || {})[m.id];
       if (!real || !fc || fc.a === undefined) return;
       if (fc.a === real.a && fc.b === real.b) stagePts += 3*stage.pts;
-      else {
-        const rw = real.a>real.b?1:real.a<real.b?-1:0;
-        const fw = fc.a>fc.b?1:fc.a<fc.b?-1:0;
-        if (rw === fw) stagePts += stage.pts;
-      }
+      else { const rw = real.a>real.b?1:real.a<real.b?-1:0; const fw = fc.a>fc.b?1:fc.a<fc.b?-1:0; if (rw===fw) stagePts += stage.pts; }
     });
     const isMe = state.currentUser === idx;
     html += `<td style="padding:10px 8px;text-align:center;background:var(--azul);${isMe?'border-left:2px solid var(--verde);border-right:2px solid var(--verde);':''}">
@@ -2039,8 +1896,6 @@ function showFullStageTable(stageKey) {
     </td>`;
   });
   html += '</tr></tbody></table></div>';
-  
-  // Show in a full-page overlay
   let overlay = document.getElementById('fullTableOverlay');
   if (!overlay) {
     overlay = document.createElement('div');
@@ -2051,16 +1906,16 @@ function showFullStageTable(stageKey) {
   overlay.innerHTML = `
     <div style="max-width:1600px;margin:0 auto;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text-muted);letter-spacing:2px;">POLLA TITO FUENTES · MUNDIAL 2026</div>
-        <button class="btn btn-ghost" onclick="closeFullTable()">✕ Cerrar</button>
-          ${(state.isAdmin || isStageRevealed(stageKey)) ? `<button class="btn btn-green btn-sm" onclick="exportTableToCSV('${stageKey}')" style="margin-left:8px;">📥 Exportar Excel</button>` : ''}
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text-muted);letter-spacing:2px;">POLLA JJBE · MUNDIAL 2026</div>
+        <div style="display:flex;gap:8px;">
+          ${(state.isAdmin || isStageRevealed(stageKey)) ? `<button class="btn btn-green btn-sm" onclick="exportTableToCSV('${stageKey}')">📥 Exportar Excel</button>` : ''}
+          <button class="btn btn-ghost" onclick="closeFullTable()">✕ Cerrar</button>
         </div>
       </div>
       ${html}
     </div>`;
   overlay.style.display = 'block';
 }
-
 
 // ══════════════════════════════════════════════════
 // CONFIRM FORECASTS
@@ -2071,15 +1926,11 @@ function confirmStageForecasts(pIdx, stageKey) {
   const fcs = state.forecasts[pIdx] || {};
   const loaded = stageMatches.filter(m => fcs[m.id] && fcs[m.id].a !== undefined).length;
   const total = stageMatches.length;
-
   if (loaded === 0) { showAlert('error','No tenés ningún pronóstico cargado en esta etapa.'); return; }
-
   const msg = loaded < total
     ? `Tenés ${loaded} de ${total} pronósticos cargados en ${stage.label}. Los partidos sin pronóstico quedarán en 0. ¿Confirmás?`
     : `Confirmás los ${total} pronósticos de ${stage.label}?`;
-
   if (!confirm(msg)) return;
-
   if (!state.confirmed) state.confirmed = {};
   if (!state.confirmed[pIdx]) state.confirmed[pIdx] = {};
   state.confirmed[pIdx][stageKey] = true;
@@ -2088,9 +1939,6 @@ function confirmStageForecasts(pIdx, stageKey) {
   showAlert('success', `📤 Pronósticos de ${stage.label} enviados al comité.`);
 }
 
-// ══════════════════════════════════════════════════
-// EDIT PARTICIPANT NAME (admin)
-// ══════════════════════════════════════════════════
 function editParticipantName(idx) {
   const current = state.participants[idx].name;
   const newName = prompt('Nuevo nombre para el participante:', current);
@@ -2104,22 +1952,17 @@ function editParticipantName(idx) {
 }
 
 // ══════════════════════════════════════════════════
-// EXPORT TO CSV (formato planilla patrón, separador ;)
+// EXPORT TO CSV
 // ══════════════════════════════════════════════════
 function exportTableToCSV(stageKey) {
   const stage = STAGES.find(s => s.key === stageKey);
   const stageMatches = MATCHES.filter(m => m.etapa === stageKey);
   const parts = PARTICIPANTS();
   const SEP = ';';
-
   const rows = [];
-  rows.push(['POLLA TITO FUENTES - 60 Aniversario', 'MUNDIAL 2026']);
+  rows.push(['POLLA JJBE - MUNDIAL 2026']);
   rows.push([stage.label + ' - Exacto: ' + (3*stage.pts) + ' pts - Correcto: ' + stage.pts + ' pt']);
-
-  // Numbers row
   rows.push(['', '', '', '', 'REAL', ...parts.map((_,i) => i+1)]);
-
-  // POSICIONES top
   const topTotals = parts.map((p) => {
     const pidx = state.participants.findIndex(x => x.name === p.name);
     let pts = 0;
@@ -2128,21 +1971,15 @@ function exportTableToCSV(stageKey) {
       const fc = (state.forecasts[pidx]||{})[m.id];
       if (!real || !fc || fc.a===undefined) return;
       if (fc.a===real.a && fc.b===real.b) { pts += 3*stage.pts; return; }
-      const rw = real.a>real.b?1:real.a<real.b?-1:0;
-      const fw = fc.a>fc.b?1:fc.a<fc.b?-1:0;
+      const rw = real.a>real.b?1:real.a<real.b?-1:0; const fw = fc.a>fc.b?1:fc.a<fc.b?-1:0;
       if (rw===fw) pts += stage.pts;
     });
     return pts;
   });
   rows.push(['POSICIONES', '', '', '', 'TOTAL', ...topTotals]);
-
-  // Headers
   rows.push(['PARTIDO', 'FECHA', 'HORA-ESTADIO', 'GRUPO', 'EQUIPO', 'REAL', ...parts.map(p => p.name)]);
-
-  // Matches
   stageMatches.forEach(m => {
     const real = state.results[m.id];
-    // Local row
     const localRow = [m.id, m.fecha, m['hora'] + ' - ' + m['estadio'], m.grupo, m.local, real ? real.a : ''];
     parts.forEach((p,i) => {
       const pidx = state.participants.findIndex(x => x.name === p.name);
@@ -2150,8 +1987,6 @@ function exportTableToCSV(stageKey) {
       localRow.push((fc && fc.a !== undefined && fc.a !== null) ? fc.a : '');
     });
     rows.push(localRow);
-
-    // Visita row
     const visitaRow = ['', '', '', '', m.visita, real ? real.b : ''];
     parts.forEach((p,i) => {
       const pidx = state.participants.findIndex(x => x.name === p.name);
@@ -2159,8 +1994,6 @@ function exportTableToCSV(stageKey) {
       visitaRow.push((fc && fc.b !== undefined && fc.b !== null) ? fc.b : '');
     });
     rows.push(visitaRow);
-
-    // PUNTAJE row
     const pRow = ['PUNTAJE', '', '', '', '', ''];
     parts.forEach((p,i) => {
       const pidx = state.participants.findIndex(x => x.name === p.name);
@@ -2168,24 +2001,18 @@ function exportTableToCSV(stageKey) {
       const fc = (state.forecasts[pidx]||{})[m.id];
       if (!fc || fc.a===undefined) { pRow.push(0); return; }
       if (fc.a===real.a && fc.b===real.b) { pRow.push(3*stage.pts); return; }
-      const rw = real.a>real.b?1:real.a<real.b?-1:0;
-      const fw = fc.a>fc.b?1:fc.a<fc.b?-1:0;
+      const rw = real.a>real.b?1:real.a<real.b?-1:0; const fw = fc.a>fc.b?1:fc.a<fc.b?-1:0;
       pRow.push(rw===fw ? stage.pts : 0);
     });
     rows.push(pRow);
   });
-
-  // POSICIONES bottom
   rows.push(['POSICIONES', '', '', '', 'TOTAL', ...topTotals]);
-
-  // Build CSV with semicolon (Windows Excel compatible)
   const csv = '\uFEFF' + rows.map(row =>
     row.map(cell => {
       const s = String(cell === null || cell === undefined ? '' : cell);
       return s.includes(SEP) || s.includes('"') ? '"' + s.replace(/"/g, '""') + '"' : s;
     }).join(SEP)
   ).join('\n');
-
   const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -2198,14 +2025,13 @@ function exportTableToCSV(stageKey) {
   showAlert('success', 'Planilla exportada. Abrila con Excel.');
 }
 
-
 function saveComiteMsg() {
   const msg = document.getElementById('comiteMsgInput').value.trim();
   state.comiteMsg = msg;
   saveState();
   const preview = document.getElementById('comiteMsgPreview');
   if (preview) preview.innerHTML = msg ? '✅ Mensaje activo: <em style="color:var(--oro);">' + msg + '</em>' : '📭 Sin mensaje activo.';
-  showAlert('success', msg ? '📢 Mensaje enviado a todos los participantes.' : '📭 Mensaje borrado.');
+  showAlert('success', msg ? '📢 Mensaje enviado a todos.' : '📭 Mensaje borrado.');
 }
 
 function clearComiteMsg() {
@@ -2224,41 +2050,27 @@ function loadComiteMsg() {
   if (preview) preview.innerHTML = state.comiteMsg ? '✅ Mensaje activo: <em style="color:var(--oro);">' + state.comiteMsg + '</em>' : '📭 Sin mensaje activo.';
 }
 
-// ══════════════════════════════════════════════════
-// RESET ALL DATA
-// ══════════════════════════════════════════════════
 function confirmReset() {
   const pwd1 = prompt('Para resetear todos los datos, ingresá la contraseña del comité:');
   if (pwd1 !== ADMIN_PWD) { showAlert('error', 'Contraseña incorrecta.'); return; }
   const pwd2 = prompt('Confirmación — ingresá la contraseña nuevamente:');
   if (pwd2 !== ADMIN_PWD) { showAlert('error', 'Contraseña incorrecta. Reset cancelado.'); return; }
   if (!confirm('¿Estás seguro? Se borrarán TODOS los pronósticos, resultados y datos. Esta acción NO se puede deshacer.')) return;
-
-  // Reset state
   state.results = {};
   state.forecasts = {};
   state.confirmed = {};
   state.revealedStages = {};
   state.realChampion = '';
   state.comiteMsg = '';
-  // Keep participants list
-
-  // Clear localStorage
   localStorage.removeItem('pollaJJBE2026');
   localStorage.removeItem('pollaSessionJJBE');
-
-  // Save reset timestamp so ALL devices clear their cache on next load
   const ts = Date.now();
   state._resetTimestamp = ts;
   localStorage.setItem('pollaResetTimestampJJBE', ts);
-
-  // Clear Firebase - push empty state so all users get reset
   pushToFirebase();
-
   buildAll();
-  showAlert('success', '✅ Todos los datos fueron borrados. La polla está en cero.');
+  showAlert('success', '✅ Todos los datos fueron borrados.');
 }
-
 
 function exportPositionsToCSV() {
   const ranking = getRanking();
@@ -2280,12 +2092,12 @@ function exportPositionsToCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'Polla_Tito_Fuentes_Posiciones.csv';
+  a.download = 'Polla_JJBE_Posiciones.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showAlert('success', 'Posiciones exportadas. Abrila con Excel.');
+  showAlert('success', 'Posiciones exportadas.');
 }
 
 function closeFullTable() {
