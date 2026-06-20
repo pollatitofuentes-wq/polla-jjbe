@@ -453,6 +453,11 @@ function fbSubscribe(){
   fbEventSource.addEventListener('patch',(e)=>{try{const d=JSON.parse(e.data);if(d.data)mergeFirebaseData(d.data);}catch(err){}});
   fbEventSource.onerror=()=>{showSyncIndicator('error');setTimeout(fbSubscribe,5000);};
 }
+// FIX v08: reconectar apenas el teléfono recupera señal o la app vuelve a primer plano,
+// en vez de esperar el timer pasivo (que se pausa en background en iOS/Android).
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')fbSubscribe();});
+window.addEventListener('online',fbSubscribe);
+window.addEventListener('focus',fbSubscribe);
 
 function mergeFirebaseData(data){
   if(!data){state.results={};state.forecasts={};state.confirmed={};state.revealedStages={};state.comiteMsg='';state.realChampion='';saveLocal();showSyncIndicator('ok');if(document.getElementById('mainApp').style.display!=='none'){buildAll();if(state.isAdmin&&state._adminViewingIdx!==null)showParticipantView(state._adminViewingIdx,state._pvStage);else if(state.currentUser!==null&&state.currentUser!=='admin')showParticipantView(state.currentUser,state._pvStage);}return;}
