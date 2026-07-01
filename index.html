@@ -550,7 +550,7 @@ function buildAll(){buildStats();buildRanking();buildStageTabs();buildMatches('1
 function buildStats(){const played=Object.keys(state.results).length,total=MATCHES.length,ranking=getRanking(),leader=ranking[0];document.getElementById('statsRow').innerHTML=`<div class="stat-box"><div class="stat-num">${played}</div><div class="stat-label">PARTIDOS JUGADOS</div></div><div class="stat-box"><div class="stat-num">${total-played}</div><div class="stat-label">PARTIDOS RESTANTES</div></div><div class="stat-box"><div class="stat-num">${PARTICIPANTS().length}</div><div class="stat-label">PARTICIPANTES</div></div><div class="stat-box"><div class="stat-num" style="color:var(--oro);">${leader.pts}</div><div class="stat-label">PUNTAJE LÍDER</div></div>`;}
 function buildRanking(){const ranking=getRanking();let html=`<table class="ranking-table"><thead><tr><th>#</th><th>PARTICIPANTE</th><th>PUNTOS</th><th>EXACTOS</th><th>CORRECTOS</th><th>MIS PRONÓSTICOS</th></tr></thead><tbody>`;ranking.forEach((p,i)=>{const posClass=i===0?'gold':i===1?'silver':i===2?'bronze':'';html+=`<tr><td><span class="rank-pos ${posClass}">${i+1}</span></td><td><span class="rank-name">${p.name}</span></td><td><span class="rank-pts">${p.pts}</span></td><td><span class="rank-detail">⭐ ${p.exact}</span></td><td><span class="rank-detail">✓ ${p.correct}</span></td>${(state.isAdmin||state.currentUser===p.idx||STAGES.some(s=>isStageRevealed(s.key)))?`<td><button class="btn btn-ghost btn-sm" onclick="showParticipantView(${p.idx})">👁 Ver</button></td>`:'<td></td>'}</tr>`;});html+='</tbody></table>';document.getElementById('rankingTableContainer').innerHTML=html;buildRevealedStageButtons();}
 function buildGlobalMsgBanner(){const el=document.getElementById('globalMsgBanner');if(!el)return;const msg=state.comiteMsg||'';el.innerHTML=msg.trim()?`<div style="background:linear-gradient(135deg,rgba(245,197,24,0.2),rgba(0,166,81,0.15));border:2px solid rgba(245,197,24,0.6);border-radius:8px;padding:14px 16px;display:flex;align-items:flex-start;gap:10px;"><span style="font-size:20px;flex-shrink:0;">📢</span><span style="font-size:15px;color:var(--text);font-weight:500;line-height:1.4;">${msg}</span></div>`:'';}
-function buildRevealedStageButtons(){const el=document.getElementById('revealedStageButtons');if(!el)return;const revealed=STAGES.filter(s=>isStageRevealed(s.key));if(revealed.length===0){el.innerHTML=state.isAdmin?'':'<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;color:var(--text-muted);">📋 El comité aún no habilitó la visualización de ninguna planilla completa.</div>';return;}let html='<div style="margin-bottom:4px;font-size:12px;color:var(--text-muted);font-weight:600;letter-spacing:1px;">PLANILLAS DISPONIBLES</div><div style="display:flex;gap:8px;flex-wrap:wrap;">';revealed.forEach(s=>{html+=`<button class="btn btn-oro btn-sm" onclick="showFullStageTable('${s.key}')">📋 Ver planilla ${s.label}</button>`;});html+='</div>';el.innerHTML=html;}
+function buildRevealedStageButtons(){const el=document.getElementById('revealedStageButtons');if(!el)return;const revealed=STAGES.filter(s=>isStageRevealed(s.key));if(revealed.length===0){el.innerHTML=state.isAdmin?'':'<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;color:var(--text-muted);">📋 El comité aún no habilitó la visualización de ninguna planilla completa.</div>';return;}let html='<div style="margin-bottom:4px;font-size:12px;color:var(--text-muted);font-weight:600;letter-spacing:1px;">PLANILLAS DISPONIBLES</div><div style="display:flex;gap:8px;flex-wrap:wrap;">';revealed.forEach(s=>{html+=`<button class="btn btn-oro btn-sm" onclick="showFullStageTable('${s.key}')">📋 Ver planilla ${s.label}</button>`;});html+=`<button class="btn btn-green btn-sm" onclick="showFullGeneralTable()">📋 Ver planilla GENERAL</button>`;html+='</div>';el.innerHTML=html;}
 function buildStageTabs(){document.getElementById('stageTabs').innerHTML=STAGES.map(s=>`<button class="stage-tab ${s.key==='1RUEDA'?'active':''}" onclick="buildMatches('${s.key}',this)">${s.label}</button>`).join('');}
 
 function buildMatches(stageKey,btn){
@@ -646,7 +646,7 @@ let currentEmailIdx=null;
 function showEmailModal(idx){currentEmailIdx=idx;const p=state.participants[idx],url=`${location.origin}${location.pathname}?p=${idx}`;document.getElementById('modalEmailContent').innerHTML=`<p style="font-size:14px;color:var(--text-muted);margin-bottom:12px;">Enviando invitación a <strong style="color:var(--text);">${p.name}</strong></p><div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:13px;line-height:1.7;"><div><strong>Para:</strong> ${p.email}</div><div><strong>Asunto:</strong> Polla JJBE · Mundial 2026 · Tu link personal</div><div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border);">Hola ${p.name}!<br><br>Te invitamos a la <strong>Polla JJBE · Mundial 2026</strong>.<br><br>Tu link:<br><span style="color:var(--verde);word-break:break-all;">${url}</span><br><br>¡Buena suerte! ⚽</div></div>`;document.getElementById('modalEmailBtn').dataset.idx=idx;document.getElementById('modalEmail').classList.add('open');}
 function sendEmail(){const idx=parseInt(document.getElementById('modalEmailBtn').dataset.idx),p=state.participants[idx],url=`${location.origin}${location.pathname}?p=${idx}`;window.open(`mailto:${p.email}?subject=${encodeURIComponent('Polla JJBE · Mundial 2026 · Tu link personal')}&body=${encodeURIComponent('Hola '+p.name+'!\n\nTe invitamos a la Polla JJBE · Mundial 2026.\n\nTu link:\n'+url+'\n\n¡Buena suerte! ⚽')}`);closeModal('modalEmail');}
 
-function buildStageRevealControls(){const el=document.getElementById('stageRevealControls');if(!el)return;let html='<div style="display:grid;gap:10px;">';STAGES.forEach(stage=>{const revealed=isStageRevealed(stage.key),matchesInStage=MATCHES.filter(m=>m.etapa===stage.key),played=matchesInStage.filter(m=>state.results[m.id]).length,total=matchesInStage.length;html+=`<div style="background:var(--bg3);border:1px solid ${revealed?'var(--verde)':'var(--border)'};border-radius:8px;padding:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;"><div><div style="font-weight:600;font-size:15px;">${stage.label}</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${played}/${total} partidos jugados${revealed?' · <span style="color:var(--verde);">✓ Planilla visible para todos</span>':' · <span style="color:var(--text-muted);">🔒 Solo cada uno ve los suyos</span>'}</div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${revealed?`<button class="btn btn-red btn-sm" onclick="toggleStageReveal('${stage.key}',false)">🔒 Cerrar planilla</button>`:`<button class="btn btn-oro btn-sm" onclick="toggleStageReveal('${stage.key}',true)">🔓 Revelar planilla</button>`}<button class="btn btn-ghost btn-sm" onclick="showFullStageTable('${stage.key}')">👁 Ver planilla</button><button class="btn btn-green btn-sm" onclick="exportTableToCSV('${stage.key}')">📥 Exportar Excel</button></div></div>`;});html+='</div>';el.innerHTML=html;}
+function buildStageRevealControls(){const el=document.getElementById('stageRevealControls');if(!el)return;let html='<div style="display:grid;gap:10px;">';STAGES.forEach(stage=>{const revealed=isStageRevealed(stage.key),matchesInStage=MATCHES.filter(m=>m.etapa===stage.key),played=matchesInStage.filter(m=>state.results[m.id]).length,total=matchesInStage.length;html+=`<div style="background:var(--bg3);border:1px solid ${revealed?'var(--verde)':'var(--border)'};border-radius:8px;padding:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;"><div><div style="font-weight:600;font-size:15px;">${stage.label}</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${played}/${total} partidos jugados${revealed?' · <span style="color:var(--verde);">✓ Planilla visible para todos</span>':' · <span style="color:var(--text-muted);">🔒 Solo cada uno ve los suyos</span>'}</div></div><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">${revealed?`<button class="btn btn-red btn-sm" onclick="toggleStageReveal('${stage.key}',false)">🔒 Cerrar planilla</button>`:`<button class="btn btn-oro btn-sm" onclick="toggleStageReveal('${stage.key}',true)">🔓 Revelar planilla</button>`}<button class="btn btn-ghost btn-sm" onclick="showFullStageTable('${stage.key}')">👁 Ver planilla</button><button class="btn btn-green btn-sm" onclick="exportTableToCSV('${stage.key}')">📥 Exportar Excel</button></div></div>`;});html+=`<div style="background:var(--bg3);border:2px solid var(--verde);border-radius:8px;padding:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;"><div><div style="font-weight:600;font-size:15px;">📋 Planilla GENERAL</div><div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Todas las etapas combinadas · Admin ve todo · Participantes solo ven etapas reveladas</div></div><div style="display:flex;gap:8px;"><button class="btn btn-green btn-sm" onclick="showFullGeneralTable()">👁 Ver planilla general</button><button class="btn btn-green btn-sm" onclick="exportGeneralCSV()">📥 Exportar Excel</button></div></div>`;html+='</div>';el.innerHTML=html;}
 function toggleStageReveal(stageKey,reveal){if(!state.revealedStages)state.revealedStages={};state.revealedStages[stageKey]=reveal;saveState();buildStageRevealControls();buildRevealedStageButtons();const stage=STAGES.find(s=>s.key===stageKey);showAlert('success',reveal?`✅ Planilla de ${stage.label} ahora visible para todos.`:`🔒 Planilla de ${stage.label} cerrada.`);}
 
 function showFullStageTable(stageKey){
@@ -682,6 +682,114 @@ function confirmReset(){const pwd1=prompt('Para resetear todos los datos, ingres
 
 function exportPositionsToCSV(){const ranking=getRanking(),SEP=';',rows=[];rows.push(['POLLA JJBE · MUNDIAL 2026','','TABLA GENERAL DE POSICIONES']);rows.push([]);rows.push(['',...ranking.map(p=>p.name)]);rows.push(['PUNTOS',...ranking.map(p=>p.pts)]);rows.push(['EXACTOS',...ranking.map(p=>p.exact)]);rows.push(['CORRECTOS',...ranking.map(p=>p.correct)]);const csv='\uFEFF'+rows.map(row=>row.map(cell=>{const s=String(cell===null||cell===undefined?'':cell);return s.includes(SEP)||s.includes('"')?'"'+s.replace(/"/g,'""')+'"':s;}).join(SEP)).join('\n');const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='Polla_JJBE_Posiciones.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);showAlert('success','Posiciones exportadas.');}
 function closeFullTable(){const el=document.getElementById('fullTableOverlay');if(el)el.remove();}
+
+function showFullGeneralTable(){
+  const visibleStages=state.isAdmin?STAGES:STAGES.filter(s=>isStageRevealed(s.key));
+  if(visibleStages.length===0){showAlert('error','El comité aún no habilitó ninguna planilla.');return;}
+  const allMatches=visibleStages.flatMap(s=>MATCHES.filter(m=>m.etapa===s.key));
+  const parts=PARTICIPANTS();
+  const COL_PARTIDO=200,COL_REAL=72;
+
+  // helper: puntos de un participante en un partido
+  function matchPts(idx,m){const real=state.results[m.id],fc=(state.forecasts[idx]||{})[m.id];if(!real||!fc||fc.a===undefined)return null;const s=STAGES.find(x=>x.key===m.etapa);if(fc.a===real.a&&fc.b===real.b)return 3*s.pts;const rw=real.a>real.b?1:real.a<real.b?-1:0,fw=fc.a>fc.b?1:fc.a<fc.b?-1:0;return rw===fw?s.pts:0;}
+
+  // totales por etapa y general
+  const stageTotals=visibleStages.map(s=>parts.map((_,i)=>{let pts=0;MATCHES.filter(m=>m.etapa===s.key).forEach(m=>{const p=matchPts(i,m);if(p!==null)pts+=p;});return pts;}));
+  const grandTotals=parts.map((_,i)=>stageTotals.reduce((sum,st)=>sum+st[i],0));
+
+  let html=`<div style="overflow-x:auto;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--oro);letter-spacing:2px;margin-bottom:16px;">PLANILLA GENERAL · TODAS LAS FASES</div>
+    <table style="border-collapse:collapse;font-size:12px;min-width:100%;table-layout:fixed;">
+      <colgroup><col style="width:${COL_PARTIDO}px;min-width:${COL_PARTIDO}px;"><col style="width:${COL_REAL}px;min-width:${COL_REAL}px;"></colgroup>
+      <thead><tr>
+        <th style="background:var(--azul);padding:8px 12px;text-align:left;border-bottom:2px solid var(--verde);position:sticky;left:0;z-index:2;">PARTIDO</th>
+        <th style="background:var(--azul);padding:8px 12px;text-align:center;border-bottom:2px solid var(--verde);position:sticky;left:${COL_PARTIDO}px;z-index:2;border-left:2px solid var(--oro);">REAL</th>`;
+  parts.forEach((p,idx)=>{const isMe=state.currentUser===idx;html+=`<th style="background:${isMe?'rgba(0,166,81,0.2)':'var(--azul)'};padding:6px 8px;text-align:center;border-bottom:2px solid var(--verde);min-width:85px;max-width:110px;vertical-align:middle;"><span style="color:${isMe?'var(--verde)':'var(--text-muted)'};font-size:10px;display:block;word-break:break-word;line-height:1.4;">${p.name}</span></th>`;});
+  html+='</tr></thead><tbody>';
+
+  // fila TOTAL GENERAL sticky arriba
+  html+=`<tr style="border-bottom:3px solid var(--oro);position:sticky;top:0;z-index:2;">
+    <td style="padding:10px 12px;background:var(--azul);font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px;position:sticky;left:0;z-index:3;">TOTAL GENERAL</td>
+    <td style="padding:10px 12px;background:var(--azul);position:sticky;left:${COL_PARTIDO}px;z-index:3;border-left:2px solid var(--oro);"></td>`;
+  parts.forEach((_,idx)=>{const isMe=state.currentUser===idx;html+=`<td style="padding:8px 6px;text-align:center;background:var(--azul);${isMe?'border-left:2px solid var(--verde);border-right:2px solid var(--verde);':''}"><span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--oro);">${grandTotals[idx]}</span></td>`;});
+  html+='</tr>';
+
+  // filas por etapa
+  visibleStages.forEach((stage,si)=>{
+    const stageMatches=MATCHES.filter(m=>m.etapa===stage.key);
+    // subtotal de etapa
+    html+=`<tr style="border-top:2px solid var(--azul-mid);border-bottom:1px solid var(--azul-mid);">
+      <td style="padding:6px 12px;background:var(--azul-mid);font-family:'Bebas Neue',sans-serif;font-size:13px;letter-spacing:1px;position:sticky;left:0;z-index:1;color:var(--oro);">${stage.label.toUpperCase()} — Exacto 3pts · Correcto 1pt</td>
+      <td style="padding:6px 12px;background:var(--azul-mid);position:sticky;left:${COL_PARTIDO}px;z-index:1;border-left:2px solid var(--oro);"></td>`;
+    parts.forEach((_,idx)=>{const isMe=state.currentUser===idx;html+=`<td style="padding:6px 6px;text-align:center;background:var(--azul-mid);${isMe?'border-left:2px solid var(--verde);border-right:2px solid var(--verde);':''}"><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--verde);">${stageTotals[si][idx]}</span></td>`;});
+    html+='</tr>';
+    // partidos de la etapa
+    stageMatches.forEach((m,mi)=>{
+      const real=state.results[m.id];
+      html+=`<tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px 12px;background:var(--bg2);position:sticky;left:0;z-index:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="font-weight:600;">#${m.id}</span> ${resolveTeam(m.local)} vs ${resolveTeam(m.visita)}</td>
+        <td style="padding:8px 12px;text-align:center;background:var(--bg2);position:sticky;left:${COL_PARTIDO}px;z-index:1;border-left:2px solid var(--oro);">${real?`<span style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--oro);">${real.a}-${real.b}</span>`:'<span style="color:var(--text-muted);">—</span>'}</td>`;
+      parts.forEach((p,idx)=>{
+        const fc=(state.forecasts[idx]||{})[m.id],isMe=state.currentUser===idx;
+        let cell='<span style="color:var(--text-muted);">—</span>',bg=mi%2===0?'var(--bg)':'var(--bg2)',pts='';
+        if(fc&&fc.a!==undefined){
+          if(real){const p=matchPts(idx,m);if(p===3){bg='rgba(0,166,81,0.15)';pts='<span style="color:var(--verde);font-size:10px;">+3</span>';}else if(p===1){bg='rgba(245,197,24,0.1)';pts='<span style="color:var(--oro);font-size:10px;">+1</span>';}else if(p===0){bg='rgba(230,57,70,0.08)';pts='<span style="color:var(--rojo);font-size:10px;">0</span>';}}
+          cell=`<span style="font-family:'Bebas Neue',sans-serif;font-size:16px;">${fc.a}-${fc.b}</span>${pts?'<br>'+pts:''}`;
+        }
+        html+=`<td style="padding:6px 8px;text-align:center;background:${bg};${isMe?'border-left:2px solid var(--verde);border-right:2px solid var(--verde);':''}">${cell}</td>`;
+      });
+      html+='</tr>';
+    });
+  });
+
+  // fila TOTAL GENERAL al pie
+  html+=`<tr style="border-top:3px solid var(--oro);">
+    <td style="padding:10px 12px;background:var(--azul);font-family:'Bebas Neue',sans-serif;font-size:14px;letter-spacing:1px;position:sticky;left:0;z-index:1;">TOTAL GENERAL</td>
+    <td style="padding:10px 12px;background:var(--azul);position:sticky;left:${COL_PARTIDO}px;z-index:1;border-left:2px solid var(--oro);"></td>`;
+  parts.forEach((_,idx)=>{const isMe=state.currentUser===idx;html+=`<td style="padding:10px 8px;text-align:center;background:var(--azul);${isMe?'border-left:2px solid var(--verde);border-right:2px solid var(--verde);':''}"><span style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--oro);">${grandTotals[idx]}</span></td>`;});
+  html+='</tr></tbody></table></div>';
+
+  let overlay=document.getElementById('fullTableOverlay');
+  if(!overlay){overlay=document.createElement('div');overlay.id='fullTableOverlay';overlay.style.cssText='position:fixed;inset:0;background:var(--bg);z-index:500;overflow:auto;padding:24px;';document.body.appendChild(overlay);}
+  overlay.innerHTML=`<div style="max-width:1600px;margin:0 auto;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px;"><div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text-muted);letter-spacing:2px;">POLLA JJBE · MUNDIAL 2026</div><div style="display:flex;gap:8px;"><button class="btn btn-green btn-sm" onclick="exportGeneralCSV()">📥 Exportar Excel</button><button class="btn btn-ghost" onclick="closeFullTable()">✕ Cerrar</button></div></div>${html}</div>`;
+  overlay.style.display='block';
+}
+
+function exportGeneralCSV(){
+  const visibleStages=state.isAdmin?STAGES:STAGES.filter(s=>isStageRevealed(s.key));
+  if(visibleStages.length===0){showAlert('error','Sin etapas visibles para exportar.');return;}
+  const parts=PARTICIPANTS(),SEP=';';
+  const rows=[];
+  rows.push(['POLLA JJBE - MUNDIAL 2026','PLANILLA GENERAL']);
+  rows.push(['PARTIDO','FECHA','HORA-ESTADIO','GRUPO','EQUIPO','REAL',...parts.map(p=>p.name)]);
+  visibleStages.forEach(stage=>{
+    const stageMatches=MATCHES.filter(m=>m.etapa===stage.key);
+    rows.push([stage.label.toUpperCase(),'','','','','']);
+    stageMatches.forEach(m=>{
+      const real=state.results[m.id];
+      const localRow=[m.id,m.fecha,m.hora+' - '+m.estadio,m.grupo,resolveTeam(m.local),real?real.a:''];
+      parts.forEach((_,i)=>{const fc=(state.forecasts[i]||{})[m.id];localRow.push(fc&&fc.a!==undefined?fc.a:'');});
+      rows.push(localRow);
+      const visitaRow=['','','','',resolveTeam(m.visita),real?real.b:''];
+      parts.forEach((_,i)=>{const fc=(state.forecasts[i]||{})[m.id];visitaRow.push(fc&&fc.b!==undefined?fc.b:'');});
+      rows.push(visitaRow);
+      const pRow=['PUNTAJE','','','','',''];
+      parts.forEach((_,i)=>{if(!real){pRow.push('');return;}const fc=(state.forecasts[i]||{})[m.id];if(!fc||fc.a===undefined){pRow.push(0);return;}const s=STAGES.find(x=>x.key===m.etapa);if(fc.a===real.a&&fc.b===real.b){pRow.push(3*s.pts);return;}const rw=real.a>real.b?1:real.a<real.b?-1:0,fw=fc.a>fc.b?1:fc.a<fc.b?-1:0;pRow.push(rw===fw?s.pts:0);});
+      rows.push(pRow);
+    });
+    // subtotal de etapa
+    const stRow=['SUBTOTAL '+stage.label.toUpperCase(),'','','','',''];
+    parts.forEach((_,i)=>{let pts=0;stageMatches.forEach(m=>{const real=state.results[m.id],fc=(state.forecasts[i]||{})[m.id];if(!real||!fc||fc.a===undefined)return;const s=STAGES.find(x=>x.key===m.etapa);if(fc.a===real.a&&fc.b===real.b){pts+=3*s.pts;}else{const rw=real.a>real.b?1:real.a<real.b?-1:0,fw=fc.a>fc.b?1:fc.a<fc.b?-1:0;if(rw===fw)pts+=s.pts;}});stRow.push(pts);});
+    rows.push(stRow);
+  });
+  // total general
+  const totRow=['TOTAL GENERAL','','','','',''];
+  parts.forEach((_,i)=>{let pts=0;visibleStages.forEach(stage=>{MATCHES.filter(m=>m.etapa===stage.key).forEach(m=>{const real=state.results[m.id],fc=(state.forecasts[i]||{})[m.id];if(!real||!fc||fc.a===undefined)return;const s=STAGES.find(x=>x.key===m.etapa);if(fc.a===real.a&&fc.b===real.b){pts+=3*s.pts;}else{const rw=real.a>real.b?1:real.a<real.b?-1:0,fw=fc.a>fc.b?1:fc.a<fc.b?-1:0;if(rw===fw)pts+=s.pts;}});});totRow.push(pts);});
+  rows.push(totRow);
+  const csv='\uFEFF'+rows.map(row=>row.map(cell=>{const s=String(cell===null||cell===undefined?'':cell);return s.includes(SEP)||s.includes('"')?'"'+s.replace(/"/g,'""')+'"':s;}).join(SEP)).join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='Polla_JJBE_General.csv';document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);showAlert('success','Planilla general exportada.');
+}
 function logoutUser(){if(!confirm('¿Querés salir y cambiar de usuario?'))return;localStorage.removeItem('pollaSessionJJBE');state.currentUser=null;state.isAdmin=false;state._originalUserIdx=null;document.getElementById('mainApp').style.display='none';document.getElementById('mainNav').style.display='none';document.getElementById('accessScreen').style.display='flex';document.getElementById('accessInput').value='';}
 </script>
 </body>
